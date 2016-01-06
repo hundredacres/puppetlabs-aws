@@ -95,9 +95,11 @@ Not applicable. Must be null.'
 
   newproperty(:allocated_storage) do
     desc 'The size of the DB.'
+    munge do |value|
+      value.to_i
+    end
     validate do |value|
-      fail 'allocated_storage type should not contains spaces' if value =~ /\s/
-      fail 'allocated_storage should not be blank' if value == ''
+      fail 'allocated_storage must be an integer' unless value.to_i.to_s == value.to_s
     end
   end
 
@@ -149,7 +151,7 @@ Not applicable. Must be null.'
     end
   end
 
-  newparam(:db_subnet) do
+  newproperty(:db_subnet) do
     desc 'The VPC DB subnet for this instance.'
     validate do |value|
       fail 'subnet_group_name should be a String' unless value.is_a?(String)
@@ -193,6 +195,17 @@ Not applicable. Must be null.'
     validate do |value|
       fail 'final_db_snapshot_identifier should be a String' unless value.is_a?(String)
       fail 'final_db_snapshot_identifier should not be blank' if value == ''
+    end
+  end
+
+  newproperty(:backup_retention_period) do
+    desc 'The number of days to retain backups. Defaults to 30 days.'
+    defaultto 30
+    munge do |value|
+      value.to_i
+    end
+    validate do |value|
+      fail 'backup_retention_period must be an integer' unless value.to_i.to_s == value.to_s
     end
   end
 

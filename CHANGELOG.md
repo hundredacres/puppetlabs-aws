@@ -1,3 +1,50 @@
+## 2015-12-09 - Supported Version 1.3.0
+
+This release includes:
+
+* A new type and provider for managing SQS resources in AWS
+* Support for using a credentials file for agents
+* Support for PTR resources in Route53
+* Allow snapshots to be used when mounting block devices for instances
+
+As well as following fixes:
+
+* Correctly handle timeouts when prefetching resources
+* Fix error reporting for Route53 resources
+* Correctly handle large sets of Route53 resource by paging through
+  larger results sets
+* Fixed an issue where routes that have don't have a gateway cause
+  failures when loading routetables
+* Correctly limit the association of EIPs to pending or running instances
+
+Thanks to @jae2 @lattwood, @tamsky, Chris Pick, @cwood, @mikeslattery
+@rfletcher and the folks at ServiceChannel for contributing to this release.
+
+
+## 2015-09-04 - Supported Version 1.2.0
+
+This release includes:
+
+* The ability to manage a backup retention policy for RDS instances
+* Improvements to the Route53 and ELB types to make them more robust
+
+As well as following fixes:
+
+* Support managing RDS instances in VPC subnets
+* Updates to the IAM profile
+* The Puppet Enterprise example now uses the correct download URL
+
+Thanks to @aharden, @vazhnov, @rfletcher, @bashtoni, @claflico for
+contributing to this release.
+
+
+## 2015-07-22 - Supported Version 1.1.1
+
+This release includes:
+
+* Update to the metadata for the upcoming release of PE
+* Update to the gem installation instructions in the README
+
 ## 2015-06-16 - Supported Version 1.1.0
 
 This release includes:

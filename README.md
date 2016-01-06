@@ -6,7 +6,7 @@ Status](https://travis-ci.org/puppetlabs/puppetlabs-aws.svg?branch=master)](http
 ####Table of Contents
 
 1. [Overview](#overview)
-2. [Description - What the module does and why it is useful](#module-description)
+2. [Description - What the module does and why it is useful](#description)
 3. [Setup](#setup)
   * [Requirements](#requirements)
   * [Installing the aws module](#installing-the-aws-module)
@@ -110,6 +110,15 @@ setting for all traffic like so:
 export PUPPET_AWS_PROXY=http://localhost:8888
 ~~~
 
+#### Using a configuration file
+
+The AWS region and HTTP proxy can be provided in a file called 
+`puppetlabs_aws_configuration.ini` in the Puppet confdir 
+(`$settings::confdir`) using this format:
+
+    [default]
+      region = us-east-1
+      http_proxy = http://proxy.example.com:80
 
 ##Getting Started with aws
 
@@ -130,7 +139,7 @@ ec2_instance { 'instance-name':
 
 You can also set up more complex EC2 instances with a variety of AWS features, as well as
 load balancers and security groups.
- 
+
 **Set up an instance:**
 
 ~~~
@@ -278,7 +287,8 @@ You can use the aws module to audit AWS resources, launch autoscaling groups in 
 * [Virtual Private Cloud](https://github.com/puppetlabs/puppetlabs-aws/tree/master/examples/vpc-example): Use the Puppet DSL to manage a AWS VPC environment.
 * [Using IAM permissions](https://github.com/puppetlabs/puppetlabs-aws/tree/master/examples/iam-profile): Control the API permissions required by the module with an IAM profile.
 * [Elastic IP Addresses](https://github.com/puppetlabs/puppetlabs-aws/tree/master/examples/elastic-ip-addresses/): Attach existing elastic IP addresses to instances managed by Puppet.
-* [Create your own abstractions](https://github.com/puppetlabs/puppetlabs--aws/tree/master/examples/create-your-own-abstractions/): Use Puppet's defined types to better model your own infrastructure.
+* [Create your own abstractions](https://github.com/puppetlabs/puppetlabs-aws/tree/master/examples/create-your-own-abstractions/): Use Puppet's defined types to better model your own infrastructure.
+* [Distribute instances across availability zones](https://github.com/puppetlabs/puppetlabs-aws/tree/master/examples/distribute-across-az/): Use the future parser and stdlib functions to launch instances balanced across different availability zones.
 
 ##Reference
 
@@ -308,10 +318,12 @@ You can use the aws module to audit AWS resources, launch autoscaling groups in 
 * `route53_cname_record`: Sets up a Route53 CNAME record.
 * `route53_mx_record`: Sets up a Route53 MX record.
 * `route53_ns_record`: Sets up a Route53 DNS record.
+* `route53_ptr_record`: Sets up a Route53 PTR record.
 * `route53_spf_record`: Sets up a Route53 SPF record.
 * `route53_srv_record`: Sets up a Route53 SRV record.
 * `route53_txt_record`: Sets up a Route53 TXT record.
 * `route53_zone`: Sets up a Route53 DNS zone.
+* `sqs_queue`: Sets up an SQS queue.
 
 ###Parameters
 
@@ -366,13 +378,22 @@ The name of the key pair associated with this instance. This must be an existing
 *Optional* Whether the instance stops or terminates when you initiate shutdown from the instance. This parameter is set at creation only; it is not affected by updates. Valid values are 'stop', 'terminate'. Defaults to 'stop'.
 
 #####`block_devices`
-*Optional* A list of block devices to associate with the instance. This parameter is set at creation only; it is not affected by updates. Accepts an array of hashes with the device name and volume size specified:
+*Optional* A list of block devices to associate with the instance. This parameter is set at creation only; it is not affected by updates. Accepts an array of hashes with the device name and either the volume size or snapshot id specified:
 
 ~~~
 block_devices => [
   {
     device_name  => '/dev/sda1',
     volume_size  => 8,
+  }
+]
+~~~
+
+~~~
+block_devices => [
+  {
+    device_name  => '/dev/sda1',
+    snapshot_id => 'snap-29a6ca13',
   }
 ]
 ~~~
@@ -909,6 +930,9 @@ parameter is set at creation only; it is not affected by updates.
 The name of the snapshot created when the instance is terminated. Note
 that skip_final_snapshot must be set to false.
 
+#####`backup_retention_period`
+The number of days to retain backups. Defaults to 30 days.
+
 #### Type: route53
 
 The route53 types set up various types of Route53 records:
@@ -922,6 +946,8 @@ The route53 types set up various types of Route53 records:
 * `route53_mx_record`: Sets up a Route53 MX record.
 
 * `route53_ns_record`: Sets up a Route53 DNS record.
+
+* `route53_ptr_record`: Sets up a Route53 PTR record.
 
 * `route53_spf_record`: Sets up a Route53 SPF record.
 
@@ -952,6 +978,22 @@ All Route53 record types use the same parameters:
 
 #####`name`
 *Required* The name of DNS zone group. This is the value of the AWS Name tag.
+
+#### Type: sqs_queue
+#####`name`
+*Required* The name of the SQS queue.
+
+#####`region`
+*Required* The region in which to create the SQS Queue. For valid values, see [AWS Regions](http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region).
+
+#####`delay_seconds`
+*Optional* The time in seconds that the delivery of all messages in the queue will be delayed. Default value: 0
+
+#####`message_retention_period`
+*Optional* The number of seconds Amazon SQS retains a message. Default value: 345600
+
+#####`maximum_message_size`
+*Optional* The limit of how many bytes a message can contain before Amazon SQS rejects it.
 
 
 ##Limitations

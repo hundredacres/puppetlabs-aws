@@ -23,7 +23,7 @@ Puppet::Type.type(:rds_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
   read_only(:iops, :master_username, :multi_az, :license_model,
             :db_name, :region, :db_instance_class, :availability_zone,
             :engine, :engine_version, :allocated_storage, :storage_type,
-            :db_security_groups, :db_parameter_group)
+            :db_security_groups, :db_parameter_group, :backup_retention_period, :db_subnet)
 
   def self.prefetch(resources)
     instances.each do |prov|
@@ -34,6 +34,7 @@ Puppet::Type.type(:rds_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
   end
 
   def self.db_instance_to_hash(region, instance)
+    db_subnet = instance.db_subnet_group ? instance.db_subnet_group.db_subnet_group_name : nil
     config = {
       ensure: :present,
       name: instance.db_instance_identifier,
@@ -48,8 +49,10 @@ Puppet::Type.type(:rds_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
       license_model: instance.license_model,
       multi_az: instance.multi_az,
       iops: instance.iops,
+      db_subnet: db_subnet,
       db_parameter_group: instance.db_parameter_groups.collect(&:db_parameter_group_name).first,
       db_security_groups: instance.db_security_groups.collect(&:db_security_group_name),
+      backup_retention_period: instance.backup_retention_period
     }
     if instance.respond_to?('endpoint') && !instance.endpoint.nil?
       config[:endpoint] = instance.endpoint.address
@@ -79,9 +82,10 @@ Puppet::Type.type(:rds_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
       iops: resource[:iops],
       master_username: resource[:master_username],
       master_user_password: resource[:master_user_password],
-      subnet_group_name: resource[:db_subnet],
+      db_subnet_group_name: resource[:db_subnet],
       db_security_groups: resource[:db_security_groups],
       db_parameter_group_name: resource[:db_parameter_group],
+      backup_retention_period: resource[:backup_retention_period],
     }
 
     rds_client(resource[:region]).create_db_instance(config)

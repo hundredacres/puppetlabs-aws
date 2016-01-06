@@ -55,6 +55,31 @@ describe type_class do
     type_class.new(:name => 'sample', :ensure => :running)
   end
 
+  it 'should acknowledge stopped instance to be present' do
+    machine = type_class.new(:name => 'sample', :ensure => :present)
+    expect(machine.property(:ensure).insync?(:stopped)).to be true
+  end
+
+  it 'should acknowledge stopping instance to be present' do
+    machine = type_class.new(:name => 'sample', :ensure => :present)
+    expect(machine.property(:ensure).insync?(:stopping)).to be true
+  end
+
+  it 'should acknowledge running instance to be present' do
+    machine = type_class.new(:name => 'sample', :ensure => :present)
+    expect(machine.property(:ensure).insync?(:running)).to be true
+  end
+
+  it 'should acknowledge stopping instance to be stopped' do
+    machine = type_class.new(:name => 'sample', :ensure => :stopped)
+    expect(machine.property(:ensure).insync?(:stopping)).to be true
+  end
+
+  it 'should acknowledge running instance to be running' do
+    machine = type_class.new(:name => 'sample', :ensure => :running)
+    expect(machine.property(:ensure).insync?(:running)).to be true
+  end
+
   it 'should default monitoring to false' do
     srv = type_class.new(:name => 'sample')
     expect(srv[:monitoring]).to eq(:false)
@@ -80,15 +105,15 @@ describe type_class do
       type_class.new({:name => 'sample', :block_devices => [
         {'volume_size' => 8}
       ]})
-    }.to raise_error(Puppet::Error, /block device must include device_name/)
+    }.to raise_error(Puppet::Error, /block device must be named/)
   end
 
-  it 'if block device included must include a volume size' do
+  it 'if block device included must include a volume size or snapshot' do
     expect {
       type_class.new({:name => 'sample', :block_devices => [
         {'device_name' => '/dev/sda1'}
       ]})
-    }.to raise_error(Puppet::Error, /block device must include volume_size/)
+    }.to raise_error(Puppet::Error, /block device must include at least one of: volume_size snapshot_id/)
   end
 
   it 'if private IP included must be a valid IP' do

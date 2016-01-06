@@ -7,7 +7,6 @@ describe type_class do
   let :params do
     [
       :name,
-      :db_subnet,
       :master_user_password,
       :skip_final_snapshot,
       :final_db_snapshot_identifier,
@@ -33,6 +32,8 @@ describe type_class do
       :endpoint,
       :port,
       :db_parameter_group,
+      :backup_retention_period,
+      :db_subnet,
     ]
   end
 
@@ -71,7 +72,7 @@ describe type_class do
     expect(srv[:skip_final_snapshot]).to eq(:false)
   end
 
-  it 'should default mult_az to false' do
+  it 'should default multi_az to false' do
     srv = type_class.new(:name => 'sample')
     expect(srv[:multi_az]).to eq(:false)
   end
@@ -108,4 +109,44 @@ describe type_class do
     end
   end
 
+  it 'backup_retention_period must be an integer' do
+    expect {
+      type_class.new(:name => 'sample', :backup_retention_period => 'Ten')
+    }.to raise_error(Puppet::ResourceError, /backup_retention_period must be an integer/)
+  end
+
+  context 'with the backup_retention_period set to an integer' do
+    let(:machine) { type_class.new(:name => 'sample', :backup_retention_period => 40) }
+
+    it 'should be happy with strings for backup_retention_period' do
+      expect(machine.property(:backup_retention_period).insync?('40')).to be true
+    end
+
+    it 'should be happy with integers for backup_retention_period' do
+      expect(machine.property(:backup_retention_period).insync?(40)).to be true
+    end
+  end
+
+  it 'should default backup_retention_period to 30' do
+    srv = type_class.new(:name => 'sample')
+    expect(srv[:backup_retention_period]).to eq(30)
+  end
+
+  it 'allocated_storage must be an integer' do
+    expect {
+      type_class.new(:name => 'sample', :allocated_storage => 'Ten')
+    }.to raise_error(Puppet::ResourceError, /allocated_storage must be an integer/)
+  end
+
+  context 'with the allocated_storage set to an integer' do
+    let(:machine) { type_class.new(:name => 'sample', :allocated_storage => 40) }
+
+    it 'should be happy with strings for allocated_storage' do
+      expect(machine.property(:allocated_storage).insync?('40')).to be true
+    end
+
+    it 'should be happy with integers for allocated_storage' do
+      expect(machine.property(:allocated_storage).insync?(40)).to be true
+    end
+  end
 end
