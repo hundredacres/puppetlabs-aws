@@ -22,7 +22,7 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     end.flatten
   end
 
-  read_only(:region, :scheme, :availability_zones, :listeners, :tags)
+  read_only(:region, :scheme, :listeners, :tags)
 
   def self.prefetch(resources)
     instances.each do |prov|
@@ -50,13 +50,14 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
       end
     end
     listeners = load_balancer.listener_descriptions.collect do |listener|
-      {
+      result = {
         'protocol' => listener.listener.protocol,
         'load_balancer_port' => listener.listener.load_balancer_port,
         'instance_protocol' => listener.listener.instance_protocol,
         'instance_port' => listener.listener.instance_port,
-        'ssl_certificate_id' => listener.listener.ssl_certificate_id,
       }
+      result['ssl_certificate_id'] = listener.listener.ssl_certificate_id unless listener.listener.ssl_certificate_id.nil?
+      result
     end
     tag_response = elb_client(region).describe_tags(
       load_balancer_names: [load_balancer.load_balancer_name]
@@ -98,7 +99,26 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     Puppet.info("Checking if load balancer #{name} exists in region #{target_region}")
     @property_hash[:ensure] == :present
   end
-  
+
+  # override default mk_resource_methods behaviour so this can be done in update
+  def subnets=(value)
+    Puppet.debug("Requesting subnets #{value.inspect} for ELB #{name} in region #{target_region}")
+  end
+
+  def availability_zones=(value)
+    Puppet.debug("Requesting availability_zones #{value.inspect} for ELB #{name} in region #{target_region}")
+  end
+
+  def security_groups=(value)
+    unless value.empty?
+      ids = security_group_ids_from_names(value)
+      elb_client(resource[:region]).apply_security_groups_to_load_balancer(
+        load_balancer_name: name,
+        security_groups: ids,
+      ) unless ids.empty?
+    end
+  end
+
   def update
     Puppet.info("Updating load balancer #{name} in region #{target_region}")
     instances = resource[:instances]
@@ -106,13 +126,52 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
       instances = [instances] unless instances.is_a?(Array)
       self.class.add_instances_to_load_balancer(resource[:region], name, instances)
     end
+    if !@property_hash[:subnets] || @property_hash[:subnets].empty? # EC2-classic
+      fail_if_availability_zones_changed
+    else
+      if resource[:subnets].nil? || resource[:subnets].empty? # VPC using "default" subnets
+        fail_if_availability_zones_changed
+      elsif resource[:availability_zones].nil? || resource[:availability_zones].empty? # VPC, using specified subnets
+        update_subnets(resource[:subnets])
+      end
+    end
+  end
+
+  def fail_if_availability_zones_changed
+    if resource[:availability_zones].to_set != @property_hash[:availability_zones].to_set
+      fail "availability_zones property is read-only once elb_loadbalancer is created."
+    end
+  end
+
+  def update_subnets(value)
+    if @property_hash[:subnets].empty? && !value.empty?
+      fail 'Cannot set subnets on a EC2 instance'
+    end
+
+    to_create = value - @property_hash[:subnets]
+    to_delete = @property_hash[:subnets] - value
+    elb = elb_client(resource[:region])
+    unless to_create.empty?
+      create_ids = subnet_ids_from_names(to_create)
+      elb.attach_load_balancer_to_subnets(
+        load_balancer_name: name,
+        subnets: create_ids,
+      )
+    end
+    unless to_delete.empty?
+      delete_ids = subnet_ids_from_names(to_delete)
+      elb.detach_load_balancer_from_subnets(
+        load_balancer_name: name,
+        subnets: delete_ids,
+      )
+    end
   end
 
   def create
     Puppet.info("Creating load balancer #{name} in region #{target_region}")
-    subnets = subnet_ids_from_names(resource[:subnets])
+    subnets = subnet_ids_from_names(resource[:subnets] || [])
     security_groups = security_group_ids_from_names(resource[:security_groups])
-    zones = resource[:availability_zones]
+    zones = resource[:availability_zones] || []
     zones = [zones] unless zones.is_a?(Array)
 
     tags = resource[:tags] ? resource[:tags].map { |k,v| {key: k, value: v} } : []
@@ -122,13 +181,14 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     listeners = [listeners] unless listeners.is_a?(Array)
 
     listeners_for_api = listeners.collect do |listener|
-      {
+      result = {
         protocol: listener['protocol'],
         load_balancer_port: listener['load_balancer_port'],
         instance_protocol: listener['instanceprotocol'],
         instance_port: listener['instance_port'],
-        ssl_certificate_id: listener['ssl_certificate_id'],
       }
+      result[:ssl_certificate_id] = listener['ssl_certificate_id'] if listener.has_key?('ssl_certificate_id') and !listener['ssl_certificate_id'].nil?
+      result
     end
 
     elb_client(target_region).create_load_balancer(
@@ -142,6 +202,8 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     )
 
     @property_hash[:ensure] = :present
+    @property_hash[:availability_zones] = zones
+    @property_hash[:subnets] = subnets
 
     instances = resource[:instances]
     if ! instances.nil?
@@ -212,40 +274,10 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     end
   end
 
-  def security_groups=(value)
-    unless value.empty?
-      ids = security_group_ids_from_names(value)
-      elb_client(resource[:region]).apply_security_groups_to_load_balancer(
-        load_balancer_name: name,
-        security_groups: ids,
-      ) unless ids.empty?
-    end
-  end
-
-  def subnets=(value)
-    to_create = value - @property_hash[:subnets]
-    to_delete = @property_hash[:subnets] - value
-    elb = elb_client(resource[:region])
-    unless to_delete.empty?
-      delete_ids = subnet_ids_from_names(to_delete)
-      elb.detach_load_balancer_from_subnets(
-        load_balancer_name: name,
-        subnets: delete_ids,
-      )
-    end
-    unless to_create.empty?
-      create_ids = subnet_ids_from_names(to_create)
-      elb.attach_load_balancer_to_subnets(
-        load_balancer_name: name,
-        subnets: create_ids,
-      )
-    end
-  end
-  
   def flush
     update unless @property_hash[:ensure] == :absent
   end
-  
+
   def destroy
     Puppet.info("Destroying load balancer #{name} in region #{target_region}")
     elb_client(target_region).delete_load_balancer(
