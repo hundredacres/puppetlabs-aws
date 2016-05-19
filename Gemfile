@@ -10,7 +10,7 @@ def location_for(place, fake_version = nil)
   end
 end
 
-gem 'aws-sdk-core', '2.0.5'
+gem 'aws-sdk-core', '2.3.3'
 gem 'retries'
 
 group :test do
@@ -28,6 +28,7 @@ group :development do
   gem 'travis-lint'
   gem 'puppet-blacksmith'
   gem 'guard-rake'
+  gem 'listen', '= 3.0.7' # last version to support ruby 1.9; the proper fix would be to not install the development group in our internal CI
   gem 'rubocop', require: false
   gem 'pry'
   gem 'librarian-puppet'
