@@ -372,6 +372,9 @@ The name of the key pair associated with this instance. This must be an existing
 #####`instance_type`
 *Required* The type to use for the instance. This parameter is set at creation only; it is not affected by updates. See [Amazon EC2 Instances](http://aws.amazon.com/ec2/instance-types/) for available types.
 
+#####`tenancy`
+*Optional* Dedicated instances are Amazon EC2 instances that run in a virtual private cloud (VPC) on hardware that's dedicated to a single customer. Choices are 'dedicated' and 'default'. Defaults to shared (default) hardware.
+
 #####`private_ip_addresS`
 *Optional* The private IP address for the instance. This parameter is set at creation only; it is not affected by updates. Must be a valid IPv4 address.
 
@@ -942,6 +945,10 @@ This parameter is set at creation only; it is not affected by updates.
 #####`db_security_groups`
 Names of the database security groups to associate with the instance.
 This parameter is set at creation only; it is not affected by updates.
+
+#####`vpc_security_groups`
+IDs of the database security groups within a VPC to associate the instance
+with.  This parameter is set at creation only; it is not affected by updates.
 
 #####`endpoint`
 The DNS address of the database. Read-only.
