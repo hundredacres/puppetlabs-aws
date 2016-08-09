@@ -236,6 +236,7 @@ Found #{matching_groups.length}:
           },
         }
       end
+    end
     config['block_device_mappings'] = mappings unless mappings.empty?
     config
   end
