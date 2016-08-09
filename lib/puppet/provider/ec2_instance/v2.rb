@@ -37,9 +37,9 @@ Puppet::Type.type(:ec2_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
     end.flatten
   end
 
-  read_only(:instance_id, :instance_type, :region, :user_data, :key_name,
-            :availability_zones, :security_groups, :monitoring, :subnet,
-            :ebs_optimized, :block_devices, :private_ip_address,
+  read_only(:instance_id, :instance_type, :image_id, :region, :user_data,
+            :key_name, :availability_zones, :security_groups, :monitoring,
+            :subnet, :ebs_optimized, :block_devices, :private_ip_address,
             :iam_instance_profile_arn, :iam_instance_profile_name)
 
   def self.prefetch(resources)
@@ -103,17 +103,17 @@ Puppet::Type.type(:ec2_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
   end
 
   def exists?
-    Puppet.info("Checking if instance #{name} exists in region #{target_region}")
+    Puppet.debug("Checking if instance #{name} exists in region #{target_region}")
     running? || stopped?
   end
 
   def running?
-    Puppet.info("Checking if instance #{name} is running in region #{target_region}")
+    Puppet.debug("Checking if instance #{name} is running in region #{target_region}")
     [:present, :pending, :running].include? @property_hash[:ensure]
   end
 
   def stopped?
-    Puppet.info("Checking if instance #{name} is stopped in region #{target_region}")
+    Puppet.debug("Checking if instance #{name} is stopped in region #{target_region}")
     [:stopping, :stopped].include? @property_hash[:ensure]
   end
 
@@ -228,14 +228,14 @@ Found #{matching_groups.length}:
           device_name: device['device_name'],
           ebs: {
             volume_size: device['volume_size'],
+            snapshot_id: device['snapshot_id'],
             delete_on_termination: device['delete_on_termination'] || true,
-            volume_type: device['volume_type'] || 'standard',
+            volume_type: device['volume_type'] || 'gp2',
             iops: device['iops'],
             encrypted: device['encrypted'] ? true : nil
           },
         }
       end
-    end
     config['block_device_mappings'] = mappings unless mappings.empty?
     config
   end
