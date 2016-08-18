@@ -187,25 +187,32 @@ ec2_securitygroup { 'name-of-group':
 
 ~~~
 elb_loadbalancer { 'name-of-load-balancer':
-  ensure               => present,
-  region               => 'us-east-1',
-  availability_zones   => ['us-east-1a', 'us-east-1b'],
-  instances            => ['name-of-instance', 'another-instance'],
-  security_groups      => ['name-of-security-group'],
-  listeners            => [{
-    protocol           => 'HTTP',
-    load_balancer_port => 80,
-    instance_protocol  => 'HTTP',
-    instance_port      => 80,
+  ensure                  => present,
+  region                  => 'us-east-1',
+  availability_zones      => ['us-east-1a', 'us-east-1b'],
+  instances               => ['name-of-instance', 'another-instance'],
+  security_groups         => ['name-of-security-group'],
+  listeners               => [{
+    protocol              => 'HTTP',
+    load_balancer_port    => 80,
+    instance_protocol     => 'HTTP',
+    instance_port         => 80,
   },{
-    protocol           => 'HTTPS',
-    load_balancer_port => 443,
-    instance_protocol  => 'HTTPS',
-    instance_port      => 8080,
-    ssl_certificate_id => 'arn:aws:iam::123456789000:server-certificate/yourcert.com',
+    protocol              => 'HTTPS',
+    load_balancer_port    => 443,
+    instance_protocol     => 'HTTPS',
+    instance_port         => 8080,
+    ssl_certificate_id    => 'arn:aws:iam::123456789000:server-certificate/yourcert.com',
   }],
-  tags                 => {
-    tag_name => 'value',
+  health_check            => {
+    'healthy_threshold'   => '10',
+    'interval'            => '30',
+    'target'              => 'HTTP:80/health_check',
+    'timeout'             => '5',
+    'unhealthy_threshold' => '2'
+  },
+  tags                    => {
+    tag_name              => 'value',
   },
 }
 ~~~
@@ -479,6 +486,15 @@ The Amazon Resource Name for the associated IAM profile.
   * instance_protocol
   * instance_port
   * ssl_certificate_id (optional if protocol is HTTPS )
+
+#####`health_check`
+The configuration for an ELB health check used to determine the health of the
+back- end instances.  Accepts a hash with the following keys:
+  * healthy_threshold
+  * interval
+  * target
+  * timeout
+  * unhealthy_threshold
 
 #####`tags`
 *Optional* The tags for the load balancer. This parameter is set at creation only; it is not affected by updates. Accepts a 'key => value' hash of tags.
@@ -1097,10 +1113,18 @@ All Route53 record types use the same parameters:
 *Optional* The time to live for the record. Accepts an integer.
 
 #####`values`
-*Required* The values of the record. Accepts an array.
+*Required when not using alias_target* The values of the record. Accepts an array.
+*Conflicts with alias_target*
 
 #####`name`
 *Required* The name of DNS zone group. This is the value of the AWS Name tag.
+
+#####`alias_target`
+*Required when not using values* The name of the alias resource to target.
+*Conflicts with values*
+
+#####`alias_target_zone`
+*Required when using alias_target* The ID of the zone in which the alias_target resides.
 
 #### Type: route53_zone
 
