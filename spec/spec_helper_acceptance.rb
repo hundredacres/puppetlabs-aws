@@ -140,6 +140,13 @@ class AwsHelper
     response.data.db_security_groups
   end
 
+  def get_db_subnet_groups(name)
+    response = @rds_client.describe_db_subnet_groups(
+      db_subnet_group_name: name
+    )
+    response.data.db_subnet_groups
+  end
+
   def get_instances(name)
     response = @ec2_client.describe_instances(filters: [
       {name: 'tag:Name', values: [name]},
@@ -230,7 +237,14 @@ class AwsHelper
 
   def tag_difference(item, tags)
     item_tags = {}
-    item.tags.each { |s| item_tags[s.key.to_sym] = s.value if s.key != 'Name' }
+    if item.is_a?(Aws::RDS::Types::DBInstance)
+      tag_list = @rds_client.list_tags_for_resource({resource_name: item.db_instance_arn}).tag_list
+      tag_list.each do |tag|
+        item_tags[tag.key.to_sym] = tag.value unless tag.key == 'Name'
+      end
+    else
+      item.tags.each { |s| item_tags[s.key.to_sym] = s.value if s.key != 'Name' }
+    end
     tags.to_set ^ item_tags.to_set
   end
 
@@ -278,6 +292,22 @@ class AwsHelper
     @iam_client.list_users.users.select { |user| user.user_name == name }
   end
 
+  def get_iam_roles(name)
+    @iam_client.list_roles.roles.select { |role| role.role_name == name }
+  end
+
+  def get_iam_instance_profiles(name)
+    @iam_client.list_instance_profiles.instance_profiles.select { |instance_profile|
+      instance_profile.instance_profile_name == name
+    }
+  end
+
+  def get_iam_instance_profiles_for_role(name)
+    response = @iam_client.list_instance_profiles_for_role(
+        role_name: [name]
+    )
+    response.data.instance_profiles
+  end
 end
 
 class TestExecutor

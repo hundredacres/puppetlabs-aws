@@ -28,6 +28,7 @@ add to this profile.
   "Statement": [
     {
       "Action": [
+        "ec2:DescribeAccountAttributes",
         "ec2:DescribeRegions",
         "ec2:DescribeInstances",
         "ec2:RunInstances",
@@ -49,9 +50,10 @@ add to this profile.
         "ec2:DescribeVpcs",
         "ec2:CreateVpc",
         "ec2:DeleteVpc",
+        "ec2:AssociateDhcpOptions",
         "ec2:DescribeDhcpOptions",
         "ec2:CreateDhcpOptions",
-        "ec2:DeleteDhcp_options",
+        "ec2:DeleteDhcpOptions",
         "ec2:DescribeCustomerGateways",
         "ec2:CreateCustomerGateway",
         "ec2:DeleteCustomerGateway",

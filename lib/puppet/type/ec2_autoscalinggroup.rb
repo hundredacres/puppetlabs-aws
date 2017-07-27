@@ -1,4 +1,5 @@
 require_relative '../../puppet_x/puppetlabs/property/tag.rb'
+require_relative '../../puppet_x/puppetlabs/property/region.rb'
 require 'puppet/property/boolean'
 
 Puppet::Type.newtype(:ec2_autoscalinggroup) do
@@ -87,13 +88,8 @@ Puppet::Type.newtype(:ec2_autoscalinggroup) do
     desc 'Indicates whether newly launched instances are protected from termination by Auto Scaling when scaling in.'
   end
 
-  newproperty(:region) do
+  newproperty(:region, :parent => PuppetX::Property::AwsRegion) do
     desc 'The region in which to launch the instances.'
-    validate do |value|
-      fail 'region should not contain spaces' if value =~ /\s/
-      fail 'region should not be blank' if value == ''
-      fail 'region should be a String' unless value.is_a?(String)
-    end
   end
 
   newproperty(:launch_configuration) do
@@ -130,6 +126,24 @@ Puppet::Type.newtype(:ec2_autoscalinggroup) do
       fail 'load_balancers cannot be blank' if value == ''
       fail 'load_balancers should be a String' unless value.is_a?(String)
     end
+    def insync?(is)
+      is.to_set == should.to_set
+    end
+  end
+
+  newproperty(:target_groups, :array_matching => :all) do
+    desc 'The target groups attached to this group.'
+    validate do |value|
+      fail 'target_groups cannot be blank' if value == ''
+      fail 'target_groups should be a String' unless value.is_a?(String)
+    end
+    def insync?(is)
+      is.to_set == should.to_set
+    end
+  end
+
+  newproperty(:termination_policies, :array_matching => :all) do
+    desc 'The termination policies attached to this group.'
     def insync?(is)
       is.to_set == should.to_set
     end
